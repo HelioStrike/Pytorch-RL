@@ -113,11 +113,11 @@ def main():
 
             replay.add(old_observation, action, reward, observation)
 
-            if replay.size() >= MINIBATCH_SIZE:
-                sample_transitions = replay.sample(MINIBATCH_SIZE)
-                target_model.load_state_dict(model.state_dict())
-                update_action(model, target_model, sample_transitions, criterion, optimizer)
-                steps_until_reset -= 1
+        if replay.size() >= MINIBATCH_SIZE:
+            sample_transitions = replay.sample(MINIBATCH_SIZE)
+            target_model.load_state_dict(model.state_dict())
+            update_action(model, target_model, sample_transitions, criterion, optimizer)
+            steps_until_reset -= 1
 
 if __name__ == '__main__':
     main()

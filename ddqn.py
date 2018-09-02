@@ -42,15 +42,37 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(OBSERVATIONS_DIM, 16),
+            nn.Linear(OBSERVATIONS_DIM, 32),
+            nn.ReLU()
+        )
+
+        self.advantage = nn.Sequential(
+            nn.Linear(32, 32),
             nn.ReLU(),
-            nn.Linear(16, 16),
+            nn.Linear(32, ACTIONS_DIM)
+        )
+
+        self.value = nn.Sequential(
+            nn.Linear(32, 32),
             nn.ReLU(),
-            nn.Linear(16, ACTIONS_DIM)
+            nn.Linear(32, 1)
         )
 
     def forward(self, x):
-        return self.model(x)
+        out = self.model(x)
+        advantage = self.advantage(out)
+        value = self.value(out)
+
+        return value + advantage - advantage.mean()
+
+    def select_action(self, observation, epsilon):
+        if random.random() > epsilon:
+            observation = torch.Tensor(observation)
+            q_value = self.forward(observation)
+            action  = np.argmax(q_value.detach().numpy())
+        else:
+            action = random.randrange(2)
+        return action
 
 def update_action(action_model, target_model, sample_transitions, criterion, optimizer):
     random.shuffle(sample_transitions)
@@ -78,7 +100,11 @@ def main():
 
     replay = ReplayBuffer(REPLAY_MEMORY_SIZE)
 
+    EPSILON = 1
+    EPSILON_DECAY_RATE = 0.99
+
     model = Net()
+    target_model = Net()
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -92,11 +118,8 @@ def main():
             random_action_probability = max(random_action_probability, 0.1)
             old_observation = observation
 
-            if np.random.random() < random_action_probability:
-                action = np.random.choice(ACTIONS_DIM)
-            else:
-                action = get_out_tensor(model, observation).detach().numpy()
-                action = np.argmax(action)
+            action = model.select_action(observation, EPSILON)
+            EPSILON *= EPSILON_DECAY_RATE
 
             observation, reward, done, info = env.step(action)
             total_reward += reward
@@ -114,7 +137,8 @@ def main():
 
         if replay.size() >= MINIBATCH_SIZE:
             sample_transitions = replay.sample(MINIBATCH_SIZE)
-            update_action(model, model, sample_transitions, criterion, optimizer)
+            target_model.load_state_dict(model.state_dict())
+            update_action(model, target_model, sample_transitions, criterion, optimizer)
             steps_until_reset -= 1
 
 if __name__ == '__main__':
