@@ -79,7 +79,6 @@ def main():
     replay = ReplayBuffer(REPLAY_MEMORY_SIZE)
 
     model = Net()
-    model = Net()
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
