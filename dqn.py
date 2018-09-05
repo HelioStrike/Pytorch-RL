@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from utils import *
 
+#Hyperparameters
 ACTIONS_DIM = 2
 OBSERVATIONS_DIM = 4
 MAX_ITERATIONS = 10**6
@@ -18,17 +19,20 @@ GAMMA = 0.99
 REPLAY_MEMORY_SIZE = 1000
 NUM_EPISODES = 10000
 TARGET_UPDATE_FREQ = 100
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 100
 
 RANDOM_ACTION_DECAY = 0.99
 INITIAL_RANDOM_ACTION = 1
 
+#We'll be using this array for plotting our rewards
 reward_progress = []
 
+#calculates model(observation)
 def get_out_tensor(model, observation):
     np_obs = np.reshape(observation, [-1, OBSERVATIONS_DIM])
     return model(torch.from_numpy(np_obs).float())
 
+#trains model
 def train(model, observations, targets, criterion, optimizer):
     optimizer.zero_grad()
 
@@ -38,6 +42,7 @@ def train(model, observations, targets, criterion, optimizer):
 
     optimizer.step()
 
+#network model
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -52,6 +57,7 @@ class Net(nn.Module):
     def forward(self, x):
         return self.model(x)
 
+#trains model by taking sample inputs
 def update_action(action_model, target_model, sample_transitions, criterion, optimizer):
     random.shuffle(sample_transitions)
     batch_observations = []
@@ -73,20 +79,26 @@ def update_action(action_model, target_model, sample_transitions, criterion, opt
         train(action_model, batch_observations, batch_targets, criterion, optimizer)
 
 def main():
-    steps_until_reset = TARGET_UPDATE_FREQ
     random_action_probability = INITIAL_RANDOM_ACTION
 
+    #replay memory
     replay = ReplayBuffer(REPLAY_MEMORY_SIZE)
 
+    #model, loss function, optimizer
     model = Net()
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    #creating environment
     env = gym.make('CartPole-v0')
+
+    #collects reward to plot it later
     total_reward = 0
     for episode in range(NUM_EPISODES):
+        #reset env
         observation = env.reset()
 
+        #collect experiences
         for iteration in range(MAX_ITERATIONS):
             random_action_probability *= RANDOM_ACTION_DECAY
             random_action_probability = max(random_action_probability, 0.1)
@@ -112,10 +124,10 @@ def main():
 
             replay.add(old_observation, action, reward, observation)
 
+        #if we have enough experiences, train the model
         if replay.size() >= MINIBATCH_SIZE:
             sample_transitions = replay.sample(MINIBATCH_SIZE)
             update_action(model, model, sample_transitions, criterion, optimizer)
-            steps_until_reset -= 1
 
 if __name__ == '__main__':
     main()
