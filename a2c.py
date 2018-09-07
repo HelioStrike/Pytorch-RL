@@ -8,6 +8,7 @@ import numpy as np
 from itertools import count
 from utils import plotProgress
 
+#create the environment
 env = gym.make('CartPole-v0')
 
 #Hyper-parameters
