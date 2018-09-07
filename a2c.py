@@ -8,8 +8,6 @@ import numpy as np
 from itertools import count
 from utils import plotProgress
 
-#A3C without the asynchronous bit
-
 env = gym.make('CartPole-v0')
 
 #Hyper-parameters
