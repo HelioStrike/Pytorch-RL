@@ -2,6 +2,10 @@ import numpy as np
 from itertools import count
 import gym
 
+#OpenAI blog on Evolution Strategies: https://blog.openai.com/evolution-strategies/
+
+#Not really PyTorch code!!!
+
 #making environment
 env = gym.make('CartPole-v0')
 
